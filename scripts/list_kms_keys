@@ -1,0 +1,109 @@
+#!/usr/bin/env ruby
+#
+# Copyright 2016 The Scale Factory Limited
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of 
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
+gem 'aws-sdk', '>= 2.2.32'
+require 'aws-sdk'
+require 'optparse'
+
+options = {}
+optparse = OptionParser.new do |opts|
+    opts.banner = "Usage: list_kms_keys [options], lists Alias, ARN, KeyID"
+
+    opts.on('-p', '--profile NAME', 'AWS profile name') do |v|
+        options[:profile] = v
+    end
+    opts.on('-r', '--region REGION', 'AWS Region to use, default eu-west-1') do |v|
+        options[:region] = v
+    end
+    opts.on('-a', '--alias ALIAS', 'KMS Key Alias, default sf_hiera') do |v|
+        options[:alias] = v
+    end
+    opts.on('--assumerole ROLE', 'Assume IAM role, supply ARN') do |v|
+        options[:iamrole] = v
+    end
+    opts.on('--serial SERIAL', '2FA defice serial when assuming role') do |v|
+        options[:serial_number] = v
+    end
+    opts.on('--token TOKEN', '2FA token when assuming role') do |v|
+        options[:token] = v
+    end
+
+end
+
+begin
+    optparse.parse!
+    
+    options[:region] = 'eu-west-1'if options[:region].nil?
+    options[:alias] = 'sf_hiera' if options[:alias].nil?
+        
+    if options[:token].nil? and !options[:serial_number].nil?
+        raise OptionParser::MissingArgument, '--token'
+    end
+    
+    if options[:serial_number].nil? and !options[:token].nil?
+        raise OptionParser::MissingArgument, '--serial'
+    end
+
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument
+    $stderr.puts $ERROR_INFO.to_s
+    $stderr.puts optparse
+    exit 2
+end
+
+unless options[:iamrole].nil?
+    if options[:token].nil?
+        credentials = Aws::AssumeRoleCredentials.new(
+            client: Aws::STS::Client.new(
+                profile: options[:profile],
+                region: options[:region]
+                ),
+            role_arn: options[:iamrole],
+            role_session_name: "encrypt-script"
+        )
+    else
+        credentials = Aws::AssumeRoleCredentials.new(
+            client: Aws::STS::Client.new(
+                profile: options[:profile],
+                region: options[:region]
+                ),
+            role_arn: options[:iamrole],
+            role_session_name: "encrypt-script",
+            serial_number: options[:serial_number],
+            token_code: options[:token]
+        )
+    end
+else
+    if options[:profile].nil?
+        credentials = nil
+    else
+        credentials = Aws::SharedCredentials.new(profile_name: options[:profile])
+    end
+end
+
+begin
+    if credentials.nil?
+        kms = Aws::KMS::Client.new(region: options[:region])
+    else
+        kms = Aws::KMS::Client.new(credentials: credentials, region: options[:region])
+    end
+    aliases = kms.list_aliases.aliases.map{|k| [k.alias_name, k.alias_arn, k.target_key_id]}
+    
+    aliases.each do |keyalias, arn, id|
+      puts "  #{keyalias} #{arn} #{id}"
+    end
+    
+rescue Aws::Errors::MissingCredentialsError
+    $stderr.puts 'Unable to login with credentials'
+    exit 2
+end

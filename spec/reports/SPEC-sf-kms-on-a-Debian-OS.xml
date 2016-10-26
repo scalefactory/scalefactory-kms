@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="sf_kms on a Debian OS" tests="5" time="2.308316129" failures="0" errors="0" skipped="0" timestamp="2016-08-30T09:46:11+01:00">
+  <testcase name="sf_kms on a Debian OS should compile into a catalogue without dependency cycles" time="2.06940949">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS should contain Class[sf_kms::config]" time="0.082064218">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS should contain Class[sf_kms::install]" time="0.054403501">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS should contain File[/var/lib/puppet/keys/public_key.pkcs7.pem] with ensure =&gt; &quot;present&quot;, owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.051330105">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS should contain File[/var/lib/puppet/keys/private_key.pkcs7.pem] with owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.050145305">
+  </testcase>
+</testsuite>

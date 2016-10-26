@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="sf_kms on a Debian OS with a custom location" tests="5" time="0.298457672" failures="0" errors="0" skipped="0" timestamp="2016-08-30T09:46:13+01:00">
+  <testcase name="sf_kms on a Debian OS with a custom location should compile into a catalogue without dependency cycles" time="0.103899142">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS with a custom location should contain Class[sf_kms::config]" time="0.043536522">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS with a custom location should contain Class[sf_kms::install]" time="0.044090103">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS with a custom location should contain File[/tmp/buttons/help/public_key.pkcs7.pem] with ensure =&gt; &quot;present&quot;, owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.045463649">
+  </testcase>
+  <testcase name="sf_kms on a Debian OS with a custom location should contain File[/tmp/buttons/help/private_key.pkcs7.pem] with owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.060525019">
+  </testcase>
+</testsuite>

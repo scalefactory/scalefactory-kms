@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="sf_kms on a RedHat OS with a custom location" tests="5" time="0.306438688" failures="0" errors="0" skipped="0" timestamp="2016-08-30T09:46:14+01:00">
+  <testcase name="sf_kms on a RedHat OS with a custom location should compile into a catalogue without dependency cycles" time="0.123225937">
+  </testcase>
+  <testcase name="sf_kms on a RedHat OS with a custom location should contain Class[sf_kms::config]" time="0.044368338">
+  </testcase>
+  <testcase name="sf_kms on a RedHat OS with a custom location should contain Class[sf_kms::install]" time="0.045419884">
+  </testcase>
+  <testcase name="sf_kms on a RedHat OS with a custom location should contain File[/tmp/buttons/help/public_key.pkcs7.pem] with ensure =&gt; &quot;present&quot;, owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.048470728">
+  </testcase>
+  <testcase name="sf_kms on a RedHat OS with a custom location should contain File[/tmp/buttons/help/private_key.pkcs7.pem] with owner =&gt; &quot;puppet&quot;, group =&gt; &quot;root&quot; and mode =&gt; &quot;0440&quot;" time="0.04407701">
+  </testcase>
+</testsuite>

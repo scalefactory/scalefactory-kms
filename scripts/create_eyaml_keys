@@ -1,0 +1,156 @@
+#!/usr/bin/env ruby
+#
+# Copyright 2016 The Scale Factory Limited
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of 
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+#
+# This script will generate a eyaml key pai for you and place them in the folder 
+# indicated by --target
+#
+# It requires that you have a KMS key pair, and you know it's alias.
+#
+# It will encrypt the private key with the KMS key, and remove the unencrypted
+# volume. These can then be used in your puppet repo without secret leak.
+#
+# You will need a aws config file set up to connect to your target AWS 
+# environment.
+#
+require 'aws-sdk'
+require 'optparse'
+require 'fileutils'
+require 'tmpdir'
+
+script_dir = File.absolute_path(File.dirname(__FILE__))
+
+options = {}
+optparse = OptionParser.new do |opts|
+    opts.banner = "Usage: create_eyaml_keys [options]"
+
+    opts.on('-p', '--profile NAME', 'AWS profile name') { |v| options[:profile] = v }
+    opts.on('-t', '--target FOLDER', 'Folder to write keys to, defaults to \'out\'') { |v| options[:target_folder] = v }
+    opts.on('-r', '--region REGION', 'AWS Region to use, default eu-west-1')  { |v| options[:region] = v }
+    opts.on('-a', '--alias ALIAS', 'KMS Key Alias, default sf_hiera')  { |v| options[:alias] = v }
+    opts.on('--nodelete', 'Keep a copy of the created unencrypted keys')  { |v| options[:nodelete] = true }
+    opts.on('--assumerole ROLE', 'Assume IAM role, supply ARN')  { |v| options[:iamrole] = v }
+    opts.on('--serial TOKEN', '2FA token when assuming role')  { |v| options[:serial_number] = v }
+    opts.on('--token TOKEN', '2FA token when assuming role')  { |v| options[:token] = v }
+
+end
+
+begin
+    optparse.parse!
+
+    if options[:target_folder].nil?
+        options[:target_folder] = "#{script_dir}/out"
+    end
+    
+    if options[:region].nil?
+        options[:region] = 'eu-west-1'
+    end
+    
+    if options[:alias].nil?
+        options[:alias] = 'sf_hiera'
+    end
+    
+    if options[:nodelete].nil?
+        options[:nodelete] = false
+    end
+    
+    if options[:token].nil? and !options[:serial_number].nil?
+        raise OptionParser::MissingArgument, '--token'
+    end
+    
+    if options[:serial_number].nil? and !options[:token].nil?
+        raise OptionParser::MissingArgument, '--serial'
+    end
+
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument
+    $stderr.puts $!.to_s
+    $stderr.puts optparse
+    exit 2
+end
+
+unless options[:iamrole].nil?
+    if options[:token].nil?
+        credentials = Aws::AssumeRoleCredentials.new(
+            client: Aws::STS::Client.new(
+                profile: options[:profile],
+                region: options[:region]
+                ),
+            role_arn: options[:iamrole],
+            role_session_name: "encrypt-script"
+        )
+    else
+        credentials = Aws::AssumeRoleCredentials.new(
+            client: Aws::STS::Client.new(
+                profile: options[:profile],
+                region: options[:region]
+                ),
+            role_arn: options[:iamrole],
+            role_session_name: "encrypt-script",
+            serial_number: options[:serial_number],
+            token_code: options[:token]
+        )
+    end
+else
+    if options[:profile].nil?
+        credentials = nil
+    else
+        credentials = Aws::SharedCredentials.new(profile_name: options[:profile])
+    end
+end
+
+
+if credentials.nil?
+    kms = Aws::KMS::Client.new(region: options[:region])
+else
+    kms = Aws::KMS::Client.new(credentials: credentials, region: options[:region])
+end
+
+aliases = kms.list_aliases.aliases.map{|k| [k.alias_name, k.alias_arn]}
+
+if aliases.include? "alias/#{options[:alias]}"
+    puts "Couldn't find KMS alias #{options[:alias]}"
+    puts "The following keys with aliases were found in #{options[:region]}:"
+    aliases.each do |keyalias, arn|
+      puts "  #{keyalias}\t\t#{arn}"
+    end
+    exit 2
+end
+
+Dir.mktmpdir do |dir|
+    puts "Moving to tmp dir #{dir}..."
+    Dir.chdir(dir) do
+        system('eyaml createkeys --pkcs7-public-key keys/public_key.pkcs7.pem --pkcs7-private-key keys/private_key.pkcs7.pem')
+    end
+    
+    in_pub_key     = "#{dir}/keys/public_key.pkcs7.pem"
+    in_private_key = "#{dir}/keys/private_key.pkcs7.pem"
+    puts "Private key is:\n#{File.read(in_private_key)}"
+
+    secret =  kms.encrypt({
+      key_id: "alias/#{options[:alias]}",
+      plaintext: File.read(in_private_key),
+    }).ciphertext_blob
+
+    FileUtils.mkdir_p options[:target_folder] unless File.exists?(options[:target_folder])
+    File.write("#{options[:target_folder]}/private.pem", secret)
+    FileUtils.copy in_pub_key, "#{options[:target_folder]}/public.pem"
+    if options[:nodelete]
+        FileUtils.copy_entry("#{dir}/keys", "#{options[:target_folder]}/keys", remove_destination=true)
+        puts "Unecrypted keys left in #{options[:target_folder]}/keys"
+    end
+end
+
+puts "Keys created in #{options[:target_folder]}"
+
+  
