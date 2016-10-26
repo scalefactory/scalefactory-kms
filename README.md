@@ -1,9 +1,9 @@
-# scalefactory_kms
+# scalefactory-kms
 
 #### Table of Contents
 
 1. [Description](#description)
-1. [Setup - The basics of getting started with scalefactory_kms](#setup)
+1. [Setup - The basics of getting started with scalefactory-kms](#setup)
     * [Setup requirements](#setup-requirements)
     * [Beginning with kms](#beginning-with-kms)
 1. [Usage - Configuration options and additional functionality](#usage)
@@ -24,7 +24,7 @@ KMS setup with a Key
 Some files encrypted with KMS that need decrypting
 The gem `aws-sdk-resources` => 2.2.34 is installed and available to puppet
 
-### Beginning with scalefactory_kms
+### Beginning with scalefactory-kms
 
 You need a KMS key set up, and the servers role needs to be able to decrypt with 
 the KMS key, an example of the policy on the key might be:
